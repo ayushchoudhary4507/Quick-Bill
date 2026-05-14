@@ -2,7 +2,7 @@
 
 from decimal import Decimal
 from typing import Optional
-# pyrefly: ignore [missing-import]
+
 from pydantic import BaseModel, ConfigDict, Field
 
 

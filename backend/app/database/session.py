@@ -7,9 +7,9 @@ the session is closed after the request completes.
 
 from collections.abc import Generator
 
-# pyrefly: ignore [missing-import]
+
 from sqlalchemy import create_engine
-# pyrefly: ignore [missing-import]
+
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.config.settings import get_settings

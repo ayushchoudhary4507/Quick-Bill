@@ -1,7 +1,6 @@
-
 from datetime import datetime, timedelta, timezone
 # pyrefly: ignore [missing-import]
-from jose import jwt,JWTError
+from jose import jwt, JWTError
 # pyrefly: ignore [missing-import]
 from passlib.context import CryptContext
 from app.config.settings import get_settings

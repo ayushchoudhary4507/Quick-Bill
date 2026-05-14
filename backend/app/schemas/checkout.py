@@ -1,7 +1,7 @@
 """Request/response models for checkout."""
 
 from decimal import Decimal
-# pyrefly: ignore [missing-import]
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 

@@ -9,9 +9,9 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 
-# pyrefly: ignore [missing-import]
+
 from sqlalchemy import DateTime, Numeric, func, ForeignKey
-# pyrefly: ignore [missing-import]
+
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base

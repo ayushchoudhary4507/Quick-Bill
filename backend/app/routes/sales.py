@@ -4,11 +4,11 @@ Sales history routes.
 `GET /sales` returns prior transactions with nested line items.
 """
 
-# pyrefly: ignore [missing-import]
+
 from fastapi import APIRouter, Depends
-# pyrefly: ignore [missing-import]
+
 from sqlalchemy import select
-# pyrefly: ignore [missing-import]
+
 from sqlalchemy.orm import Session, selectinload
 
 from app.database.session import get_db

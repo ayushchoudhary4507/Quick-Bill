@@ -4,6 +4,7 @@ from datetime import datetime
 from sqlalchemy import Integer, String, DateTime, ForeignKey, func, Enum
 # pyrefly: ignore [missing-import]
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.database.base import Base
 import enum
 
