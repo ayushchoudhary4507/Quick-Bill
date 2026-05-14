@@ -6,10 +6,11 @@ Product inventory model.
 
 from __future__ import annotations
 
+from datetime import datetime
 from decimal import Decimal
 
 # pyrefly: ignore [missing-import]
-from sqlalchemy import Integer, Numeric, String, Text
+from sqlalchemy import Integer, Numeric, String, Text, DateTime, func
 # pyrefly: ignore [missing-import]
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -24,8 +25,14 @@ class Product(Base):
     price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     stock: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     image_url: Mapped[str] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     sale_items: Mapped[list["SaleItem"]] = relationship(
         "SaleItem",
         back_populates="product",
     )
+    inventory_audits: Mapped[list["InventoryAudit"]] = relationship(
+        "InventoryAudit",
+        back_populates="product",
+    )
+

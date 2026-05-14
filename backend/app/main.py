@@ -15,7 +15,7 @@ from sqlalchemy import inspect as sqlalchemy_inspect
 from app.config.settings import get_settings
 from app.database.base import Base
 from app.database.session import engine
-from app.routes import checkout, products, sales
+# Routers are imported below to avoid circular dependencies or for better organization
 
 settings = get_settings()
 
@@ -31,6 +31,7 @@ async def lifespan(_: FastAPI):
     # For local development, protect against "table exists but schema is older".
     # `create_all()` only creates missing tables; it won't add missing columns.
     settings = get_settings()
+    print(f"Connecting to database: {settings.database_url}")
     inspector = sqlalchemy_inspect(engine)
     table_names = set(inspector.get_table_names())
 
@@ -80,9 +81,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from app.routes import checkout, products, sales, auth, analytics
+
+app.include_router(auth.router, prefix=settings.api_v1_prefix)
 app.include_router(products.router, prefix=settings.api_v1_prefix)
 app.include_router(checkout.router, prefix=settings.api_v1_prefix)
 app.include_router(sales.router, prefix=settings.api_v1_prefix)
+app.include_router(analytics.router, prefix=settings.api_v1_prefix)
+
 
 
 @app.get("/health")

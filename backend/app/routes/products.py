@@ -31,16 +31,21 @@ def list_products(
     db: Session = Depends(get_db),
 ) -> list[Product]:
     """Return all products ordered by name for stable UI."""
-    print("Fetching products from database...")
-    
-    if search and search.strip():
-        term = f"%{search.strip()}%"
-        products = db.query(Product).filter(Product.name.ilike(term)).order_by(Product.name.asc()).all()
-    else:
-        products = db.query(Product).order_by(Product.name.asc()).all()
-        
-    print(f"Fetched {len(products)} products: {[p.name for p in products]}")
-    return products
+    print("DEBUG: Fetching products from database...")
+    try:
+        if search and search.strip():
+            term = f"%{search.strip()}%"
+            products = db.query(Product).filter(Product.name.ilike(term)).order_by(Product.name.asc()).all()
+        else:
+            products = db.query(Product).order_by(Product.name.asc()).all()
+            
+        print(f"DEBUG: Fetched {len(products)} products: {[p.name for p in products]}")
+        return products
+    except Exception as e:
+        import traceback
+        print("ERROR: Failed to fetch products")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("", response_model=ProductRead, status_code=status.HTTP_201_CREATED)
@@ -97,3 +102,15 @@ def update_product(
     db.commit()
     db.refresh(product)
     return product
+
+
+@router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_product(product_id: int, db: Session = Depends(get_db)):
+    """Delete a product by id."""
+    product = db.get(Product, product_id)
+    if product is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+    
+    db.delete(product)
+    db.commit()
+    return None

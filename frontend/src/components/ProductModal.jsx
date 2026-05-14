@@ -1,18 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { productsApi } from '../services/api';
 
-export default function ProductModal({ isOpen, onClose, onSuccess, showToast }) {
+export default function ProductModal({ isOpen, onClose, onSuccess, showToast, product = null }) {
   const [formData, setFormData] = useState({ name: '', price: '', stock: '', image_url: '' });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Reset form when modal opens
+  const isEdit = !!product;
+
+  // Sync form with product when editing
   useEffect(() => {
     if (isOpen) {
-      setFormData({ name: '', price: '', stock: '', image_url: '' });
+      if (product) {
+        setFormData({
+          name: product.name || '',
+          price: product.price || '',
+          stock: product.stock || '',
+          image_url: product.image_url || ''
+        });
+      } else {
+        setFormData({ name: '', price: '', stock: '', image_url: '' });
+      }
       setErrors({});
     }
-  }, [isOpen]);
+  }, [isOpen, product]);
 
   if (!isOpen) return null;
 
@@ -39,7 +50,6 @@ export default function ProductModal({ isOpen, onClose, onSuccess, showToast }) 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear error for the field being edited
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: null }));
     }
@@ -51,17 +61,25 @@ export default function ProductModal({ isOpen, onClose, onSuccess, showToast }) 
 
     setIsSubmitting(true);
     try {
-      await productsApi.create({
+      const payload = {
         name: formData.name.trim(),
         price: Number(formData.price),
         stock: Number(formData.stock),
         image_url: formData.image_url ? formData.image_url.trim() : null,
-      });
-      showToast('Product added successfully!', 'success');
-      onSuccess(); // Refresh products
-      onClose(); // Close modal
+      };
+
+      if (isEdit) {
+        await productsApi.update(product.id, payload);
+        showToast('Product updated successfully!', 'success');
+      } else {
+        await productsApi.create(payload);
+        showToast('Product added successfully!', 'success');
+      }
+      
+      onSuccess();
+      onClose();
     } catch (error) {
-      showToast(error.message || 'Failed to create product', 'error');
+      showToast(error.message || `Failed to ${isEdit ? 'update' : 'create'} product`, 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -69,12 +87,12 @@ export default function ProductModal({ isOpen, onClose, onSuccess, showToast }) 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm transition-opacity dark:bg-slate-900/80">
-      {/* Modal Container */}
       <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/5 dark:bg-slate-800 dark:ring-white/10 animate-in fade-in zoom-in duration-200">
         
-        {/* Modal Header */}
         <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Add New Product</h2>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+            {isEdit ? 'Edit Product' : 'Add New Product'}
+          </h2>
           <button 
             onClick={onClose}
             className="text-slate-400 hover:text-slate-500 transition-colors dark:hover:text-slate-300 p-1"
@@ -86,11 +104,8 @@ export default function ProductModal({ isOpen, onClose, onSuccess, showToast }) 
           </button>
         </div>
 
-        {/* Modal Body */}
         <form onSubmit={handleSubmit} className="p-6">
           <div className="space-y-4">
-            
-            {/* Name Field */}
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Product Name <span className="text-red-500">*</span>
@@ -111,10 +126,7 @@ export default function ProductModal({ isOpen, onClose, onSuccess, showToast }) 
               {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
             </div>
 
-            {/* Price & Stock Grid */}
             <div className="grid grid-cols-2 gap-4">
-              
-              {/* Price Field */}
               <div>
                 <label htmlFor="price" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Price (₹) <span className="text-red-500">*</span>
@@ -137,7 +149,6 @@ export default function ProductModal({ isOpen, onClose, onSuccess, showToast }) 
                 {errors.price && <p className="mt-1 text-xs text-red-500">{errors.price}</p>}
               </div>
 
-              {/* Stock Field */}
               <div>
                 <label htmlFor="stock" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Stock Qty <span className="text-red-500">*</span>
@@ -161,7 +172,6 @@ export default function ProductModal({ isOpen, onClose, onSuccess, showToast }) 
               </div>
             </div>
 
-            {/* Image URL Field */}
             <div>
               <label htmlFor="image_url" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Image URL <span className="text-slate-400 text-xs font-normal">(Optional)</span>
@@ -183,7 +193,6 @@ export default function ProductModal({ isOpen, onClose, onSuccess, showToast }) 
             </div>
           </div>
 
-          {/* Modal Actions */}
           <div className="mt-8 flex items-center justify-end gap-3">
             <button
               type="button"
@@ -204,12 +213,11 @@ export default function ProductModal({ isOpen, onClose, onSuccess, showToast }) 
                   Saving...
                 </>
               ) : (
-                'Add Product'
+                isEdit ? 'Update Product' : 'Add Product'
               )}
             </button>
           </div>
         </form>
-
       </div>
     </div>
   );

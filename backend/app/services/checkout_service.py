@@ -1,85 +1,105 @@
 """
-Checkout domain logic.
-
-All stock mutations and sale persistence happen in a single database transaction so the
-database never ends up in a partially-updated state if something fails mid-flight.
+Robust checkout logic with atomic transactions and deadlock prevention.
 """
 
 from decimal import Decimal
-
+# pyrefly: ignore [missing-import]
 from fastapi import HTTPException, status
+# pyrefly: ignore [missing-import]
 from sqlalchemy import select
+# pyrefly: ignore [missing-import]
 from sqlalchemy.orm import Session
-
 from app.models.product import Product
 from app.models.sale import Sale
 from app.models.sale_item import SaleItem
+from app.models.inventory_audit import InventoryAudit, AuditAction
 from app.schemas.checkout import CheckoutLineIn
 
-
-def process_checkout(db: Session, lines: list[CheckoutLineIn]) -> Sale:
+def process_checkout(db: Session, items: list[CheckoutLineIn], user_id: int) -> Sale:
     """
-    Validate stock, create `Sale` + `SaleItem` rows, and decrement inventory.
-
-    Uses row-level locks (`FOR UPDATE`) to reduce race conditions when two checkouts
-    touch the same SKU concurrently.
+    Industry-level checkout flow:
+    1. Consolidate items.
+    2. Sort product IDs to prevent deadlocks.
+    3. Start atomic transaction.
+    4. Lock product rows using SELECT FOR UPDATE.
+    5. Validate stock and pricing.
+    6. Update stock, create Sale, SaleItems, and InventoryAudit logs.
+    7. Commit or Rollback.
     """
-    if not lines:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cart cannot be empty",
-        )
+    if not items:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cart is empty")
 
-    # Consolidate duplicate product lines into a single quantity (client bug tolerance).
+    # 1. Consolidate
     merged: dict[int, int] = {}
-    for line in lines:
-        merged[line.product_id] = merged.get(line.product_id, 0) + line.quantity
+    for item in items:
+        merged[item.product_id] = merged.get(item.product_id, 0) + item.quantity
+
+    # 2. Sort product IDs to prevent deadlocks (Lock rows in sorted product ID order)
+    sorted_product_ids = sorted(merged.keys())
 
     try:
-        total = Decimal("0.00")
-        sale = Sale(total_amount=Decimal("0.00"))
+        # 3. Start transaction (handled by db.commit() at end, but we use try/except)
+        total_amount = Decimal("0.00")
+        
+        # Create Sale object first to get ID
+        sale = Sale(total_amount=Decimal("0.00"), created_by=user_id)
         db.add(sale)
-        db.flush()  # assign sale.id without committing
+        db.flush() # Flush to get sale.id
 
-        for product_id, qty in merged.items():
-            stmt = select(Product).where(Product.id == product_id).with_for_update()
+        # 4 & 5. Lock and Validate
+        for pid in sorted_product_ids:
+            qty = merged[pid]
+            
+            # SELECT ... FOR UPDATE (Row-level locking)
+            stmt = select(Product).where(Product.id == pid).with_for_update()
             product = db.execute(stmt).scalar_one_or_none()
-            if product is None:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Product {product_id} not found",
-                )
-            if qty < 1:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid quantity",
-                )
+            
+            if not product:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Product ID {pid} not found")
+            
             if product.stock < qty:
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Insufficient stock for '{product.name}' (requested {qty}, available {product.stock})",
+                    status_code=status.HTTP_400_BAD_REQUEST, 
+                    detail=f"Insufficient stock for {product.name}. Available: {product.stock}, Requested: {qty}"
                 )
 
-            line_total = (product.price * qty).quantize(Decimal("0.01"))
-            total += line_total
+            # 6. Update and Log
+            line_total = product.price * qty
+            total_amount += line_total
 
-            db.add(
-                SaleItem(
-                    sale_id=sale.id,
-                    product_id=product.id,
-                    quantity=qty,
-                    price=product.price,
-                )
+            # Create SaleItem (using price_at_purchase for historical integrity)
+            sale_item = SaleItem(
+                sale_id=sale.id,
+                product_id=product.id,
+                quantity=qty,
+                price=product.price # snapshot
             )
+            db.add(sale_item)
+
+            # Reduce Stock
             product.stock -= qty
 
-        sale.total_amount = total
+            # Create InventoryAudit Log
+            audit = InventoryAudit(
+                product_id=product.id,
+                action_type=AuditAction.REMOVE,
+                quantity=qty,
+                reason=f"Sale #{sale.id}",
+                performed_by=user_id
+            )
+            db.add(audit)
+
+        sale.total_amount = total_amount
+        
+        # 7. Commit
         db.commit()
         db.refresh(sale)
         return sale
+
     except HTTPException:
         db.rollback()
         raise
-    except Exception:
+    except Exception as e:
         db.rollback()
-        raise
+        # Log error here in real production
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Transaction failed: {str(e)}")

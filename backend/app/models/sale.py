@@ -9,7 +9,9 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import DateTime, Numeric, func
+# pyrefly: ignore [missing-import]
+from sqlalchemy import DateTime, Numeric, func, ForeignKey
+# pyrefly: ignore [missing-import]
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
@@ -25,6 +27,10 @@ class Sale(Base):
         server_default=func.now(),
         nullable=False,
     )
+    created_by: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+
+    user: Mapped["User"] = relationship("User")
+
 
     items: Mapped[list["SaleItem"]] = relationship(
         "SaleItem",

@@ -33,6 +33,12 @@ class Settings(BaseSettings):
     # IMPORTANT: For production, keep this false and use migrations (e.g. Alembic).
     recreate_tables_on_startup: bool = False
 
+    # Security
+    secret_key: str = "SUPER_SECRET_KEY_CHANGE_ME"
+    algorithm: str = "HS256"
+    access_token_expire_minutes: int = 60 * 24 # 1 day
+
+
     @property
     def cors_origin_list(self) -> list[str]:
         """Split comma-separated CORS origins into a list."""
