@@ -77,7 +77,12 @@ def process_checkout(db: Session, items: list[CheckoutLineIn], user_id: int) -> 
             db.add(sale_item)
 
             # Reduce Stock
+            old_stock = product.stock
             product.stock -= qty
+            print(f"DEBUG: Product '{product.name}' Stock Update:")
+            print(f"  - Stock Before: {old_stock}")
+            print(f"  - Quantity Purchased: {qty}")
+            print(f"  - Stock After: {product.stock}")
 
             # Create InventoryAudit Log
             audit = InventoryAudit(
@@ -92,8 +97,16 @@ def process_checkout(db: Session, items: list[CheckoutLineIn], user_id: int) -> 
         sale.total_amount = total_amount
         
         # 7. Commit
+        db.add(sale)
         db.commit()
+        
+        # EXTREME VERIFICATION: Re-fetch from DB directly
+        db.expire_all()
+        verify_product = db.query(Product).filter(Product.id == sorted_product_ids[0]).first()
+        print(f"DATABASE VERIFIED: Product '{verify_product.name}' stock is now: {verify_product.stock}")
+        
         db.refresh(sale)
+        print(f"SUCCESS: Checkout complete for Sale #{sale.id}. DB Committed and Verified.")
         return sale
 
     except HTTPException:

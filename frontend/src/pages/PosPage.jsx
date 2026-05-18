@@ -10,7 +10,7 @@ import ProductCard from '../components/ProductCard.jsx'
 import Toast from '../components/Toast.jsx'
 import { useCart } from '../hooks/useCart.js'
 import { useDebouncedValue } from '../hooks/useDebouncedValue.js'
-import { checkoutApi, productsApi } from '../services/api.js'
+import { checkoutApi, productsApi, paymentApi } from '../services/api.js'
 import { formatCurrency } from '../utils/formatCurrency.js'
 
 export default function PosPage() {
@@ -39,33 +39,57 @@ export default function PosPage() {
     setToast({ message, type })
   }, [])
 
-  const refreshProducts = useCallback(async () => {
-    setLoading(true)
+  const refreshProducts = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true)
     setLoadError(null)
     try {
       const data = await productsApi.list()
       setProducts(Array.isArray(data) ? data : [])
     } catch (e) {
-      setLoadError(e.message || 'Failed to load products')
-      showToast(e.message || 'Failed to load products', 'error')
+      if (!silent) {
+        setLoadError(e.message || 'Failed to load products')
+        showToast(e.message || 'Failed to load products', 'error')
+      }
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }, [showToast])
 
   useEffect(() => {
-    // Defer fetch so initial loading state updates are not synchronous inside the effect body (react-hooks/set-state-in-effect).
-    const id = window.setTimeout(() => {
-      void refreshProducts()
-    }, 0)
-    return () => window.clearTimeout(id)
+    // Initial fetch
+    refreshProducts()
+
+    // 1. Polling every 3 seconds for real-time stock sync (silent)
+    const pollInterval = setInterval(() => {
+      void refreshProducts(true)
+    }, 3000)
+
+    // 2. Refresh when the tab/window gains focus
+    const handleFocus = () => refreshProducts(true)
+    window.addEventListener('focus', handleFocus)
+
+    return () => {
+      clearInterval(pollInterval)
+      window.removeEventListener('focus', handleFocus)
+    }
   }, [refreshProducts])
 
   const filteredProducts = useMemo(() => {
     const q = debouncedSearch.trim().toLowerCase()
-    if (!q) return products
-    return products.filter((p) => p.name.toLowerCase().includes(q))
-  }, [products, debouncedSearch])
+
+    // Calculate available stock by subtracting cart quantities
+    const baseProducts = products.map(p => {
+      const cartLine = lines.find(l => l.product_id === p.id);
+      const inCartQty = cartLine ? cartLine.quantity : 0;
+      return {
+        ...p,
+        availableStock: p.stock - inCartQty
+      };
+    });
+
+    if (!q) return baseProducts;
+    return baseProducts.filter((p) => p.name.toLowerCase().includes(q))
+  }, [products, debouncedSearch, lines])
 
   const handleAdd = useCallback(
     (product) => {
@@ -131,6 +155,36 @@ export default function PosPage() {
     }
   }
 
+  const handleStripeCheckout = async () => {
+    if (lines.length === 0) {
+      showToast('Your cart is empty.', 'error')
+      return
+    }
+
+    setCheckoutLoading(true)
+    try {
+      const items = lines.map((l) => ({
+        product_id: l.product_id,
+        product_name: l.name,
+        amount: l.price,
+        quantity: l.quantity,
+      }))
+
+      const response = await paymentApi.createCheckoutSession({
+        items,
+        currency: 'usd'
+      })
+
+      if (response.checkout_url) {
+        window.location.href = response.checkout_url
+      }
+    } catch (e) {
+      showToast(e.message || 'Stripe Checkout failed', 'error')
+    } finally {
+      setCheckoutLoading(false)
+    }
+  }
+
   return (
     <div className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6 lg:px-8">
       {toast ? (
@@ -164,7 +218,7 @@ export default function PosPage() {
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                Products 
+                Products
               </h2>
               <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
                 {filteredProducts.length} shown
@@ -273,7 +327,23 @@ export default function PosPage() {
                       Processing…
                     </>
                   ) : (
-                    'Checkout'
+                    'Direct Checkout (Cash)'
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  disabled={checkoutLoading}
+                  onClick={handleStripeCheckout}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
+                >
+                  {checkoutLoading ? (
+                    <>
+                      <span className="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                      Redirecting to Stripe…
+                    </>
+                  ) : (
+                    'Pay with Stripe (Card)'
                   )}
                 </button>
 

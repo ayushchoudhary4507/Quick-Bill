@@ -31,11 +31,14 @@ export default function Navbar() {
               Dashboard
             </NavLink>
           )}
-          <NavLink to="/register" className={linkClass}>
+          <NavLink to="/products" className={linkClass}>
             Products
           </NavLink>
           <NavLink to="/sales" className={linkClass}>
             Sales history
+          </NavLink>
+          <NavLink to="/payment/history" className={linkClass}>
+            My Payments
           </NavLink>
         </nav>
 
@@ -45,7 +48,10 @@ export default function Navbar() {
             <p className="text-xs text-slate-500 capitalize">{user?.role}</p>
           </div>
           <button
-            onClick={logout}
+            onClick={() => {
+              logout();
+              window.location.href = '/';
+            }}
             className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
           >
             Logout

@@ -6,6 +6,7 @@ Uses pydantic-settings so values can be supplied via .env or the process environ
 
 from functools import lru_cache
 
+# pyrefly: ignore [missing-import]
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -38,6 +39,12 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24 # 1 day
 
+    # Stripe
+    stripe_publishable_key: str = ""
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+    frontend_url: str = "http://localhost:5173"
+
 
     @property
     def cors_origin_list(self) -> list[str]:
@@ -48,4 +55,15 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     """Cached settings singleton (safe for import-time use)."""
-    return Settings()
+    # pyrefly: ignore [missing-import]
+    from dotenv import load_dotenv
+    import os
+    # Manually load .env from the backend directory
+    load_dotenv()
+    settings = Settings()
+    
+    # Debug print (remove in production)
+    if not settings.stripe_secret_key:
+        print("CRITICAL: STRIPE_SECRET_KEY not found in environment!")
+    
+    return settings

@@ -5,5 +5,6 @@ from app.models.sale import Sale
 from app.models.sale_item import SaleItem
 from app.models.user import User
 from app.models.inventory_audit import InventoryAudit
+from app.models.payment import Payment
 
-__all__ = ["Product", "Sale", "SaleItem", "User", "InventoryAudit"]
+__all__ = ["Product", "Sale", "SaleItem", "User", "InventoryAudit", "Payment"]

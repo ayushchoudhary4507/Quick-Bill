@@ -15,8 +15,17 @@ export default function LoginPage() {
         e.preventDefault();
         setLoading(true);
         try {
-            await login(username, password);
-            navigate('/');
+            const data = await login(username, password);
+            if (data && data.access_token) {
+                const payload = JSON.parse(atob(data.access_token.split('.')[1]));
+                if (payload.role === 'admin') {
+                    navigate('/admin/dashboard');
+                } else {
+                    navigate('/products');
+                }
+            } else {
+                navigate('/products');
+            }
         } catch (err) {
             setToast({ message: err.message || 'Login failed', type: 'error' });
         } finally {

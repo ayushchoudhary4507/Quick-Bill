@@ -52,6 +52,13 @@ export default function AdminDashboard() {
 
     useEffect(() => {
         fetchStats();
+
+        // Polling every 5 seconds for real-time dashboard sync
+        const pollInterval = setInterval(() => {
+            fetchStats();
+        }, 5000);
+
+        return () => clearInterval(pollInterval);
     }, []);
 
     const showToast = (message, type = 'success') => {
@@ -254,9 +261,18 @@ export default function AdminDashboard() {
                                                 <p className="font-semibold text-slate-900">{p.name}</p>
                                                 <p className="text-xs text-slate-500">{formatCurrency(p.price)} per unit</p>
                                             </div>
-                                            <div className="text-right">
-                                                <p className={`text-lg font-bold ${p.stock <= 3 ? 'text-rose-600' : 'text-amber-600'}`}>{p.stock}</p>
-                                                <p className="text-xs text-slate-500">remaining</p>
+                                            <div className="flex items-center gap-3">
+                                                <div className="text-right mr-3">
+                                                    <p className={`text-lg font-bold ${p.stock <= 3 ? 'text-rose-600' : 'text-amber-600'}`}>{p.stock}</p>
+                                                    <p className="text-xs text-slate-500">remaining</p>
+                                                </div>
+                                                <button 
+                                                    onClick={() => handleEditProduct(p)}
+                                                    className="p-2 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors"
+                                                    title="Quick Edit Stock"
+                                                >
+                                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-5M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
+                                                </button>
                                             </div>
                                         </div>
                                     ))}
@@ -374,9 +390,25 @@ export default function AdminDashboard() {
                             <p className="text-slate-500 italic">No low stock items currently.</p>
                         ) : (
                             stats.lowStockProducts.map((p, i) => (
-                                <div key={i} className="flex items-center justify-between p-3 bg-rose-50 rounded-xl hover:bg-rose-100 transition-colors">
-                                    <span className="font-medium text-rose-700">{p.name}</span>
-                                    <span className="text-rose-600 font-bold">{p.stock} left</span>
+                                <div key={i} className="flex items-center justify-between p-3 bg-rose-50 rounded-xl hover:bg-rose-100 transition-colors group">
+                                    <div className="flex flex-col">
+                                        <span className="font-medium text-rose-700">{p.name}</span>
+                                        <span className="text-xs text-rose-500 font-bold">{p.stock} units left</span>
+                                    </div>
+                                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button 
+                                            onClick={() => handleEditProduct(p)}
+                                            className="p-1.5 bg-white text-amber-600 rounded-lg shadow-sm hover:bg-amber-50"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-5M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
+                                        </button>
+                                        <button 
+                                            onClick={() => handleDeleteProduct(p.id)}
+                                            className="p-1.5 bg-white text-rose-600 rounded-lg shadow-sm hover:bg-rose-50"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                        </button>
+                                    </div>
                                 </div>
                             ))
                         )}

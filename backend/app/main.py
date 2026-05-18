@@ -75,19 +75,21 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origin_list,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-from app.routes import checkout, products, sales, auth, analytics
+from app.routes import checkout, products, sales, auth, analytics, payment
 
 app.include_router(auth.router, prefix=settings.api_v1_prefix)
 app.include_router(products.router, prefix=settings.api_v1_prefix)
 app.include_router(checkout.router, prefix=settings.api_v1_prefix)
 app.include_router(sales.router, prefix=settings.api_v1_prefix)
 app.include_router(analytics.router, prefix=settings.api_v1_prefix)
+app.include_router(payment.router, prefix=f"{settings.api_v1_prefix}/payments", tags=["payments"])
+app.include_router(payment.router, prefix="/stripe", tags=["stripe-webhook"])
 
 
 

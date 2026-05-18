@@ -111,6 +111,14 @@ def delete_product(product_id: int, db: Session = Depends(get_db)):
     if product is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
     
-    db.delete(product)
-    db.commit()
+    try:
+        db.delete(product)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        # Usually an IntegrityError if product is linked to SaleItems
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="Cannot delete product because it has sales history. Try updating its stock to 0 instead."
+        )
     return None

@@ -13,16 +13,18 @@ export const AuthProvider = ({ children }) => {
         if (token) {
             // Decode token to get user info (simple version)
             try {
-                const payload = JSON.parse(atob(token.split('.')[1]));
-                setUser({
-                    username: payload.sub,
-                    role: payload.role,
-                    id: payload.id
-                });
-
+                if (token && token.includes('.')) {
+                    const payload = JSON.parse(atob(token.split('.')[1]));
+                    setUser({
+                        username: payload.sub,
+                        role: payload.role,
+                        id: payload.id
+                    });
+                }
             } catch (e) {
-                console.error("Invalid token", e);
-                logout();
+                console.error("Invalid token format", e);
+                localStorage.removeItem('token');
+                setToken(null);
             }
         }
         setLoading(false);

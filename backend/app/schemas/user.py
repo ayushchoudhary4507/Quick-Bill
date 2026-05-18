@@ -1,5 +1,6 @@
 # pyrefly: ignore [missing-import]
 from pydantic import BaseModel, Field
+# pyrefly: ignore [missing-import]
 from app.models.user import UserRole
 
 class UserBase(BaseModel):

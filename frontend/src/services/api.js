@@ -52,7 +52,12 @@ async function request(method, path, data, headers = {}) {
       method,
       url: path,
       data,
-      headers
+      headers: {
+        ...headers,
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
     })
 
 
@@ -111,7 +116,8 @@ export const authApi = {
     params.append('username', username)
     params.append('password', password)
     return request('POST', '/auth/login', params, {
-        'Content-Type': 'application/x-www-form-urlencoded'
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Cache-Control': 'no-cache'
     })
   },
 
@@ -127,6 +133,26 @@ export const salesApi = {
   async list() {
     return request('GET', '/sales')
   },
+}
+
+export const paymentApi = {
+  /** POST /payments/create-checkout-session */
+  async createCheckoutSession(data) {
+    return request('POST', '/payments/create-checkout-session', data)
+  },
+
+  /** GET /payments/history */
+  async getHistory() {
+    return request('GET', '/payments/history')
+  },
+
+  /** GET /payments/admin/all */
+  async getAllPayments() {
+    return request('GET', '/payments/admin/all')
+  },
+  async verifySession(sessionId) {
+    return request('GET', `/payments/verify-session/${sessionId}`)
+  }
 }
 
 

@@ -5,7 +5,8 @@
 import { formatCurrency } from '../utils/formatCurrency.js'
 
 export default function ProductCard({ product, onAdd, disabled }) {
-  const out = product.stock === 0
+  const stockToDisplay = product.availableStock !== undefined ? product.availableStock : product.stock
+  const out = stockToDisplay === 0
 
   return (
     <article className="flex flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md">
@@ -26,7 +27,7 @@ export default function ProductCard({ product, onAdd, disabled }) {
         <p
           className={`text-xs font-medium ${out ? 'text-rose-600' : 'text-slate-600'}`}
         >
-          {out ? 'Out of stock' : `${product.stock} in stock`}
+          {out ? 'Out of stock' : `${stockToDisplay} in stock`}
         </p>
       </div>
       <button
