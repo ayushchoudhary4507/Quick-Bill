@@ -170,6 +170,7 @@ export default function PosPage() {
         quantity: l.quantity,
       }))
 
+       
       const response = await paymentApi.createCheckoutSession({
         items,
         currency: 'usd'

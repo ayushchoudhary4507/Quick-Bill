@@ -12,7 +12,6 @@ import PaymentSuccess from './pages/PaymentSuccess.jsx'
 import PaymentCancel from './pages/PaymentCancel.jsx'
 import PaymentHistory from './pages/PaymentHistory.jsx'
 import AdminPayments from './pages/AdminPayments.jsx'
-import LandingPage from './pages/LandingPage.jsx'
 
 import { Toaster } from 'react-hot-toast'
 
@@ -44,7 +43,6 @@ export default function App() {
             <main>
               <Routes>
                 <Route path="/login" element={<LoginPage />} />
-                <Route path="/" element={<LandingPage />} />
                 <Route path="/dashboard" element={<HomeRedirect />} />
                 <Route 
                   path="/admin/dashboard" 
@@ -102,7 +100,7 @@ export default function App() {
                     </ProtectedRoute>
                   } 
                 />
-                <Route path="*" element={<Navigate to="/" replace />} />
+                <Route path="*" element={<Navigate to="/login" replace />} />
               </Routes>
             </main>
           </div>

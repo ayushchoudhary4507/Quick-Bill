@@ -1,0 +1,9 @@
+{
+  "name": "quick-bill-backend",
+  "version": "1.0.0",
+  "description": "Quick-Bill Backend runner",
+  "scripts": {
+    "dev": "npm --prefix node_server run dev",
+    "start": "npm --prefix node_server start"
+  }
+}
